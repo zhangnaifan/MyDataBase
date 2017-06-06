@@ -70,19 +70,7 @@ public:
 		符合条件的元组指针数组
 	*/
 	std::vector<unsigned char*> rawSelect(std::vector<std::pair<unsigned char*, std::pair<unsigned, unsigned>>> args, unsigned addr = -1);
-	/*
-	功能：
-		给定磁盘块地址范围内的线性搜索
-	参数：
-		cond：条件字节指针
-		beg：条件在元组中的起始位置
-		end：条件在元组中的终止位置
-		from：起始搜索地址，默认-1，从第一个磁盘块开始搜索
-		steps：搜索的磁盘块数
-	返回：
-		终止的比较结果、磁盘块地址、块内偏移
-	*/
-	std::pair<int, std::pair<unsigned, unsigned>> linearSerach(unsigned char* cond, unsigned beg, unsigned end, unsigned from = -1, unsigned steps = 1);
+	
 	//将表写入磁盘块，并将其地址返回
 	unsigned saveTable();
 

@@ -45,34 +45,6 @@ unsigned RawTable::saveTable()
 	bm.write(metaAddr);
 	return metaAddr;
 }
-
-std::pair<int, std::pair<unsigned, unsigned>> RawTable::linearSerach(unsigned char* cond, unsigned beg, unsigned end, unsigned from, unsigned steps)
-{
-	if (from == -1)
-	{
-		from = startAddr;
-	}
-	unsigned addr = from; //当前地址
-	unsigned char *p = nullptr; //当前块内指针
-	unsigned char* blk = nullptr; //当前块
-	for (unsigned i = 0; addr != -1 && i < steps; addr = getNextAddr(blk))
-	{
-		blk = bm.read(addr);
-		for (p = blk + 8; p != blk + *(unsigned*)blk; p += tupleSize)
-		{
-			//注意小端存储问题!!!!!
-			//int res = memcmp(cond, p + beg, end - beg);
-			int res = cmp ? memcmp(cond, p + beg, end - beg) : *(unsigned*)cond - *(unsigned*)(p+beg);
-			if (res <= 0)
-			{
-				return { res,{ addr, p - blk } };
-			}
-		}
-		if (getNextAddr(blk) == -1 || ++i == steps)
-			break;
-	}
-	return { 1, {addr, p-blk} };
-}
 /*
 输入：元组和插入位置
 返回：-1如果没有申请新磁盘块；否则，新的磁盘块地址

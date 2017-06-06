@@ -18,23 +18,65 @@ void testTable();
 void testIndex();
 int main(int argc, char **argv)
 {
-	for (unsigned i = 1; i < 300; ++i)
-		dropBlockOnDisk(i);
+	testIndex();
 	system("pause");
 	return 0;
 }
 void testIndex()
 {
-	FIFOBufMgr buf(3 * 21, 21);
+	FIFOBufMgr buf(3 * (1+8+12), 21);
 	HashIndex index(buf, 4, false, 4);
 	unsigned size = 30;
 	unsigned char attr[4];
-	for (unsigned i = 1; i < size; ++i)
+	for (unsigned i = 1; i < size; i+=4)
 	{
 		*(unsigned*)attr = i;
 		index.insert(attr, i, i);
-		cout << "insert " << i << endl;
+		//cout << "insert " << i << endl;
 	}
+	for (unsigned i = 2; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 3; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 4; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 1; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 2; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 3; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+	for (unsigned i = 4; i < size; i += 4)
+	{
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
+	}
+
 	for (unsigned i = 1; i < size; ++i)
 	{
 		*(unsigned*)attr = i;
@@ -62,41 +104,22 @@ void testIndex()
 		}
 		cout << endl;
 	}
-}
-void testMoreRawTable()
-{
-	FIFOBufMgr buf(3 * (1 + 8 + 12), 21);
-	RawTable t(buf, 4, false);
-	unsigned char tuple[4];
-	for (unsigned i = 1; i < 20; i+=2)
+	for (unsigned i = 1; i < size; i += 2)
 	{
-		*(unsigned*)tuple = i;
-		auto pos = t.linearSerach(tuple, 0, 4);
-		t.rawAdd(tuple, pos.second.first, pos.second.second);
+		*(unsigned*)attr = i;
+		index.insert(attr, i, i);
+		//cout << "insert " << i << endl;
 	}
-	for (unsigned i = 1; i < 20; i+=2)
+	for (unsigned i = 1; i < size; ++i)
 	{
-		*(unsigned*)tuple = i;
-		auto pos = t.linearSerach(tuple, 0, 4);
-		cout << "<" << pos.first << ", " << pos.second.first << ", " << pos.second.second << ">\n";
-	}
-	for (unsigned i = 2; i < 20; i+=2)
-	{
-		*(unsigned*)tuple = i;
-		auto pos = t.linearSerach(tuple, 0, 4);
-		t.rawAdd(tuple, pos.second.first, pos.second.second);
-	}/*
-	for (unsigned i = 3; i < 20; i+=3)
-	{
-		*(unsigned*)tuple = i;
-		auto pos = t.linearSerach(tuple, 0, 4);
-		t.rawAdd(tuple, pos.second.first, pos.second.second);
-	}*/
-	for (unsigned i = 1; i < 20; ++i)
-	{
-		*(unsigned*)tuple = i;
-		auto pos = t.linearSerach(tuple, 0, 4);
-		cout << "<" << pos.first << ", " << pos.second.first << ", " << pos.second.second << ">\n";
+		*(unsigned*)attr = i;
+		auto res = index.get(attr);
+		cout << "res of " << i << " : ";
+		for (auto entry : res)
+		{
+			cout << "<" << entry.first << ", " << entry.second << "> ";
+		}
+		cout << endl;
 	}
 }
 void testTable()
@@ -110,49 +133,49 @@ void testTable()
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 2; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 3; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 4; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 1; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 2; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 3; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 4; i < size; i += 4) {
 		*(unsigned*)first = i;
 		*(unsigned*)second = i;
 		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } });
+		t.insert({ { 1,first },{ 2,second } }, true);
 	}
 	for (unsigned i = 1; i < size; ++i)
 	{

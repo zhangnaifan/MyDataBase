@@ -61,7 +61,7 @@ SeqTable::~SeqTable()
 	delete[] cache;
 }
 
-int SeqTable::insert(std::map<unsigned, unsigned char*> args)
+int SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
 {
 	if (args.find(searchKey) == args.end())
 	{
@@ -72,13 +72,12 @@ int SeqTable::insert(std::map<unsigned, unsigned char*> args)
 	format(cache, args);
 	//获取插入位置
 	auto pos = binarySearch(cache + cols[searchKey-1]);
-	/*已存在相同的searchKey
-	if (pos[0] == 0)
+	//已存在相同的searchKey
+	if (distinct && pos[0] == 0)
 	{
-		std::cerr << "INSERT FAIL: cannot insert a tuple with exsiting PK!" << std::endl;
+		std::cerr << "INSERT FAIL: cannot insert a tuple with exsiting key!" << std::endl;
 		return 0;
 	}
-	*/
 	//使用rawAdd执行插入，并更新index（如果需要）
 	unsigned addr = pos[2], offset = pos[3];
 	unsigned newAddr;
@@ -108,7 +107,7 @@ int SeqTable::remove(std::map<unsigned, unsigned char*> args)
 		for (unsigned i = pos[1] - 1; i != -1; --i)
 		{
 			unsigned addr = index[i];
-			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey], addr, 1);
+			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey] - cols[searchKey - 1], addr, 1);
 			if (linPos.first != 0)
 				break;
 			candidate.push_back(i);
@@ -116,7 +115,7 @@ int SeqTable::remove(std::map<unsigned, unsigned char*> args)
 		for (unsigned i = pos[1] + 1; i < index.size(); ++i)
 		{
 			unsigned addr = index[i];
-			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey], addr, 1);
+			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey] - cols[searchKey - 1], addr, 1);
 			if (linPos.first != 0)
 				break;
 			candidate.push_back(i);
@@ -202,7 +201,7 @@ std::vector<unsigned char*> SeqTable::select(std::map<unsigned, unsigned char*> 
 		for (unsigned i = pos[1] - 1; i != -1; --i)
 		{
 			unsigned addr = index[i];
-			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey], addr, 1);
+			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey] - cols[searchKey - 1], addr, 1);
 			if (linPos.first != 0)
 				break;
 			candidateBlks.push_back(addr);
@@ -210,7 +209,7 @@ std::vector<unsigned char*> SeqTable::select(std::map<unsigned, unsigned char*> 
 		for (unsigned i = pos[1] + 1; i < index.size(); ++i)
 		{
 			unsigned addr = index[i];
-			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey], addr, 1);
+			auto linPos = linearSerach(args[searchKey], cols[searchKey - 1], cols[searchKey] - cols[searchKey - 1], addr, 1);
 			if (linPos.first != 0)
 				break;
 			candidateBlks.push_back(addr);
@@ -229,6 +228,34 @@ std::vector<unsigned char*> SeqTable::select(std::map<unsigned, unsigned char*> 
 	}
 }
 
+std::pair<int, std::pair<unsigned, unsigned>> SeqTable::linearSerach(unsigned char* cond, unsigned beg, unsigned len, unsigned from, unsigned steps)
+{
+	if (from == -1)
+	{
+		from = startAddr;
+	}
+	unsigned addr = from; //当前地址
+	unsigned char *p = nullptr; //当前块内指针
+	unsigned char* blk = nullptr; //当前块
+	for (unsigned i = 0; addr != -1 && i < steps; addr = getNextAddr(blk))
+	{
+		blk = bm.read(addr);
+		for (p = blk + 8; p != blk + *(unsigned*)blk; p += tupleSize)
+		{
+			//注意小端存储问题!!!!!
+			//int res = memcmp(cond, p + beg, end - beg);
+			int res = cmp ? memcmp(cond, p + beg, len) : *(unsigned*)cond - *(unsigned*)(p + beg);
+			if (res <= 0)
+			{
+				return { res,{ addr, p - blk } };
+			}
+		}
+		if (getNextAddr(blk) == -1 || ++i == steps)
+			break;
+	}
+	return { 1,{ addr, p - blk } };
+}
+
 std::vector<unsigned> SeqTable::binarySearch(unsigned char * cond)
 {
 	unsigned first = 0;
@@ -238,7 +265,7 @@ std::vector<unsigned> SeqTable::binarySearch(unsigned char * cond)
 	{
 		unsigned mid = first + (last - first) / 2;
 		unsigned mid_addr = index[mid];
-		auto res = linearSerach(cond, cols[searchKey-1], cols[searchKey], mid_addr, 1);
+		auto res = linearSerach(cond, cols[searchKey-1], cols[searchKey] - cols[searchKey - 1], mid_addr, 1);
 		ret[0] = res.first;
 		ret[1] = mid;
 		ret[2] = mid_addr;
