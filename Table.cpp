@@ -1,4 +1,3 @@
-//#include "RawTable.h"
 #include "Table.h"
 #include <vector>
 #include <algorithm>
@@ -34,8 +33,8 @@ Table::Table(unsigned _metaAddr, BufferManager & _bm):RawTable(_metaAddr, _bm)
 			if (--count == 0)
 			{
 				++stage;
+				count = numBlk;
 			}
-			count = numBlk;
 			break;
 		case 4:
 			index.push_back(*(unsigned*)p);
@@ -61,6 +60,101 @@ Table::~Table()
 	delete[] cache;
 }
 
+void Table::save()
+{
+	/*
+	从第28字节开始：
+	4字节unsigned：colPk
+	4字节unsigned：colNum
+	随后：每4个字节保存一列所占的字节数
+
+	随后的numBlk个4字节：存储对应的index
+	*/
+	RawTable::save();
+	unsigned addr = metaAddr;
+	unsigned char* blk = bm.read(metaAddr);
+	unsigned char* p = blk + 28;
+	int stage = 1; //1:pk, 2:numCol, 3:col_1, col_2,..., 4:blk_1, blk_2, blk_3...
+	int count = 0;
+	while (stage < 4)
+	{
+		if (p == blk + *(unsigned*)blk)
+		{
+			//1个磁盘不够用
+			if (-1 == getNextAddr(blk))
+			{
+				unsigned newAddr = getFreeBlockOnDisk();
+				//改下地址，写回
+				*(unsigned*)(blk + 4) = newAddr;
+				bm.write(addr);
+				//新申请一个磁盘
+				addr = newAddr;
+				blk = bm.get(addr);
+				*(unsigned*)blk = 8;
+				*(unsigned*)(blk + 4) = -1;
+				p = blk + 8;
+			}
+			else
+			{
+				//直接写回
+				bm.write(addr);
+				addr = getNextAddr(blk);
+				blk = bm.read(addr);
+				p = blk + 8;
+			}
+		}
+		switch (stage)
+		{
+		case 1:
+			*(unsigned*)p = searchKey;
+			++stage;
+			break;
+		case 2:
+			count = cols.size() - 1;
+			*(unsigned*)p = count;
+			++stage;
+			break;
+		case 3:
+			*(unsigned*)p = *(cols.end() - count);
+			if (--count == 0)
+			{
+				++stage;
+				count = numBlk;
+			}
+			break;
+		case 4:
+			*(unsigned*)p = *(index.end() - count);
+			if (--count == 0)
+			{
+				++stage;
+			}
+		default:
+			break;
+		}
+		p += 4;
+	}
+	bm.write(addr);
+}
+
+void Table::dropAll()
+{
+	//清除数据磁盘块
+	for (auto i : index)
+	{
+		bm.drop(i);
+	}
+	//清除meta磁盘块
+	unsigned char* blk;
+	unsigned addr = metaAddr;
+	while (addr != -1)
+	{
+		blk = bm.read(addr);
+		unsigned newAddr = getNextAddr(blk);
+		bm.drop(addr);
+		addr = newAddr;
+	}
+}
+
 void Table::format(unsigned char * blk, std::map<unsigned, unsigned char*> args)
 {
 	memset(blk, 0, tupleSize);
@@ -74,7 +168,7 @@ void Table::format(unsigned char * blk, std::map<unsigned, unsigned char*> args)
 SeqTable::SeqTable(unsigned _metaAddr, BufferManager & _bm):Table(_metaAddr, _bm)
 {
 	unsigned char* blk = bm.read(_metaAddr);
-	cmp = *(bool*)(blk + 24);
+	cmp = *(bool*)(blk + 20);
 }
 
 SeqTable::SeqTable(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp)
@@ -82,12 +176,12 @@ SeqTable::SeqTable(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std
 {
 }
 
-int SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
+std::pair<unsigned, std::pair<unsigned, unsigned>> SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
 {
 	if (args.find(searchKey) == args.end())
 	{
 		std::cerr << "INSERT ERROR: No SearchKey" << std::endl;
-		return 0;
+		return { 0,{} };
 	}
 	//构造元组
 	format(cache, args);
@@ -97,16 +191,17 @@ int SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
 	if (distinct && pos[0] == 0)
 	{
 		std::cerr << "INSERT FAIL: cannot insert a tuple with exsiting key!" << std::endl;
-		return 0;
+		return { 0,{} };
 	}
 	//使用rawAdd执行插入，并更新index（如果需要）
 	unsigned addr = pos[2], offset = pos[3];
 	unsigned newAddr;
-	if (-1 != (newAddr = rawAdd(cache, addr, offset)))
+	auto rawAddResult = rawAdd(cache, addr, offset);
+	if (-1 != (newAddr = rawAddResult.first))
 	{
 		index.insert(index.begin() + pos[1] + 1, newAddr);
 	}
-	return 1;
+	return { 1, rawAddResult.second };
 }
 
 int SeqTable::remove(std::map<unsigned, unsigned char*> args)
@@ -247,6 +342,14 @@ std::vector<unsigned char*> SeqTable::select(std::map<unsigned, unsigned char*> 
 	{
 		return rawSelect(selArgs);
 	}
+}
+
+void SeqTable::save()
+{
+	Table::save();
+	unsigned char* blk = bm.read(metaAddr);
+	*(bool*)(blk + 20) = cmp;
+	bm.write(metaAddr);
 }
 
 std::pair<int, std::pair<unsigned, unsigned>> SeqTable::linearSerach(unsigned char* cond, unsigned beg, unsigned len, unsigned from, unsigned steps)

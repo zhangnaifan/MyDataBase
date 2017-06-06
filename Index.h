@@ -45,6 +45,7 @@ public:
 	std::vector<std::pair<unsigned, unsigned>> get(unsigned char* attr);
 	int insert(unsigned char* attr, unsigned addr, unsigned offset);
 	int remove(unsigned char* attr, unsigned addr, unsigned offset);
+	void save();
 
 private:
 	unsigned bucketSize;

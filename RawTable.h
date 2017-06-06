@@ -34,7 +34,7 @@ public:
 		-1：无新磁盘块被使用
 		否则：新磁盘块地址
 	*/
-	unsigned rawAdd(unsigned char* tuple, unsigned addr = -1, unsigned offset = -1);
+	std::pair<unsigned, std::pair<unsigned, unsigned>> rawAdd(unsigned char* tuple, unsigned addr = -1, unsigned offset = -1);
 	
 	/*
 	功能：
@@ -72,7 +72,8 @@ public:
 	std::vector<unsigned char*> rawSelect(std::vector<std::pair<unsigned char*, std::pair<unsigned, unsigned>>> args, unsigned addr = -1);
 	
 	//将表写入磁盘块，并将其地址返回
-	unsigned saveTable();
+	unsigned save();
+	void dropAll();
 
 protected:
 	unsigned getNextAddr(unsigned char*);
@@ -86,7 +87,6 @@ protected:
 	unsigned tupleSize; //元组大小
 	unsigned numBlk; //数据库占用的磁盘块
 	unsigned metaAddr; //磁盘块上存储的数据库信息：startAddr/tupleSize/numBlk/continuous
-	bool cmp; //按照字符串比较=true，按照unsigned比较=false
 
 	//helper functions
 	bool full(unsigned char*);

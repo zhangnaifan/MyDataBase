@@ -28,7 +28,7 @@ RawTable::~RawTable()
 	delete[] myBuf;
 }
 
-unsigned RawTable::saveTable()
+unsigned RawTable::save()
 {
 	if (metaAddr == -1)
 	{
@@ -43,11 +43,33 @@ unsigned RawTable::saveTable()
 	bm.write(metaAddr);
 	return metaAddr;
 }
+void RawTable::dropAll()
+{
+	unsigned char* blk;
+	unsigned addr = startAddr, newAddr;
+	//清除磁盘块数据
+	while(addr != -1)
+	{
+		blk = bm.read(addr);
+		newAddr = getNextAddr(blk);
+		bm.drop(addr);
+		addr = newAddr;
+	}
+	//清除meta磁盘块
+	addr = metaAddr;
+	while (addr != -1)
+	{
+		blk = bm.read(addr);
+		newAddr = getNextAddr(blk);
+		bm.drop(addr);
+		addr = newAddr;
+	}
+}
 /*
 输入：元组和插入位置
 返回：-1如果没有申请新磁盘块；否则，新的磁盘块地址
 */
-unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
+std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 {
 	if (addr == -1)
 	{
@@ -60,6 +82,7 @@ unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 	}
 	if (full(blk))
 	{
+		std::pair<unsigned, unsigned> blockAddr;
 		//再申请一个磁盘块
 		unsigned newBlkAddr = getFreeBlockOnDisk();
 		//unsigned char* newBlk = bm.get(newBlkAddr);
@@ -82,6 +105,7 @@ unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 			}
 			//拷贝进tuple
 			memcpy(blk + 8 + (pos - 1)*tupleSize, tuple, tupleSize);
+			blockAddr = { addr, offset };
 		}
 		else
 		{
@@ -91,6 +115,7 @@ unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 			memcpy(myBuf + 8, blk + 8 + mid * tupleSize, first * tupleSize);
 			memcpy(myBuf + 8 + first * tupleSize, tuple, tupleSize);
 			memcpy(myBuf + 8 + (first + 1) * tupleSize, blk + 8 + (mid + first)*tupleSize, second*tupleSize);
+			blockAddr = { newBlkAddr, 8 + first*tupleSize };
 		}
 
 		*(unsigned*)myBuf = (sum - mid)*tupleSize + 8;
@@ -118,7 +143,7 @@ unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 		*/
 
 		++numBlk;
-		return newBlkAddr;
+		return { newBlkAddr, blockAddr };
 	}
 	else
 	{
@@ -136,7 +161,7 @@ unsigned RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 		std::cout << std::endl;
 		*/
 		bm.write(addr);
-		return -1;
+		return { (unsigned)-1, {addr, offset} };
 	}
 }
 

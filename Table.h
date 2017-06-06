@@ -12,8 +12,10 @@ public:
 	Table(unsigned _metaAddr, BufferManager & _bm);
 	Table(BufferManager &_bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols);
 	~Table();
+	void save();
+	void dropAll();
+	unsigned getTupleSize() { return tupleSize; }
 
-protected:
 	//meta info
 	unsigned searchKey;
 	std::vector<unsigned> cols;
@@ -25,6 +27,7 @@ protected:
 	//helper functions
 	void format(unsigned char* blk, std::map<unsigned, unsigned char*> args);
 
+protected:
 	//helper cache
 	unsigned char *cache = new unsigned char[bm.getBlkSize()];
 };
@@ -39,9 +42,10 @@ class SeqTable : public Table
 public:
 	SeqTable(unsigned _metaAddr, BufferManager & _bm);
 	SeqTable(BufferManager &_bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp);
-	int insert(std::map<unsigned, unsigned char*>, bool distinct);
+	std::pair<unsigned, std::pair<unsigned, unsigned>> insert(std::map<unsigned, unsigned char*>, bool distinct);
 	int remove(std::map<unsigned, unsigned char*>);
 	std::vector<unsigned char*> select(std::map<unsigned, unsigned char*>);
+	void save();
 
 	//for testing
 	std::vector<unsigned> binarySearch(unsigned char* cond);

@@ -43,6 +43,17 @@ unsigned char* FIFOBufMgr::get(unsigned addr)
 {
 	return doGetBlk(false, addr);
 }
+int FIFOBufMgr::drop(unsigned addr)
+{
+	if (LUT.find(addr) != LUT.end())
+	{
+		q.erase(pos[addr]);
+		pos.erase(addr);
+		freeBlockInBuffer(LUT[addr].first, &buffer);
+		LUT.erase(addr);
+	}
+	return dropBlockOnDisk(addr);
+}
 unsigned char* FIFOBufMgr::read(unsigned addr)
 {
 	return doGetBlk(true, addr);
@@ -98,6 +109,31 @@ unsigned char * LRUBufMgr::read(unsigned addr)
 unsigned char* LRUBufMgr::get(unsigned addr)
 {
 	return doGetBlk(false, addr);
+}
+int LRUBufMgr::drop(unsigned addr)
+{
+	if (LUT.find(addr) != LUT.end())
+	{
+		//minFreq,freq,pos,queue,LUT
+		int fr = freq[addr];
+		freq.erase(addr);
+		queue[fr].erase(pos[addr]);
+		if (queue[fr].empty() && fr == minFreq)
+		{
+			if (LUT.size() == 1)
+			{
+				minFreq = 0;
+			}
+			else
+			{
+				for (minFreq = fr + 1; queue[minFreq].empty(); ++minFreq);
+			}
+		}
+		pos.erase(addr);
+		freeBlockInBuffer(LUT[addr].first, &buffer);
+		LUT.erase(addr);
+	}
+	return dropBlockOnDisk(addr);
 }
 void LRUBufMgr::swap()
 {
@@ -156,6 +192,31 @@ unsigned char * MRUBufMgr::read(unsigned addr)
 unsigned char * MRUBufMgr::get(unsigned addr)
 {
 	return  doGetBlk(false, addr);
+}
+int MRUBufMgr::drop(unsigned addr)
+{
+	if (LUT.find(addr) != LUT.end())
+	{
+		//minFreq,freq,pos,queue,LUT
+		int fr = freq[addr];
+		freq.erase(addr);
+		queue[fr].erase(pos[addr]);
+		if (queue[fr].empty() && fr == maxFreq)
+		{
+			if (LUT.size() == 1)
+			{
+				maxFreq = 0;
+			}
+			else
+			{
+				for (maxFreq = fr - 1; maxFreq > 0 && queue[maxFreq].empty(); --maxFreq);
+			}
+		}
+		pos.erase(addr);
+		freeBlockInBuffer(LUT[addr].first, &buffer);
+		LUT.erase(addr);
+	}
+	return dropBlockOnDisk(addr);
 }
 void MRUBufMgr::swap()
 {

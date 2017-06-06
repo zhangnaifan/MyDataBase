@@ -19,6 +19,7 @@ public:
 	~BufferManager();
 	virtual unsigned char* read(unsigned addr) = 0;
 	virtual unsigned char* get(unsigned addr) = 0;
+	virtual int drop(unsigned addr) = 0;
 	bool write(unsigned addr);
 	int getNumIO();
 	unsigned getBlkSize();
@@ -36,6 +37,7 @@ public:
 	FIFOBufMgr(size_t bufSize, size_t blkSize);
 	unsigned char* read(unsigned addr);
 	unsigned char* get(unsigned addr);
+	int drop(unsigned addr);
 
 private:
 	std::list<unsigned> q;
@@ -50,6 +52,7 @@ public:
 	LRUBufMgr(size_t bufSize, size_t blkSize);
 	unsigned char* read(unsigned addr);
 	unsigned char* get(unsigned addr);
+	int drop(unsigned addr);
 
 private:
 	int minFreq = 0;
@@ -66,6 +69,7 @@ public:
 	MRUBufMgr(size_t bufSize, size_t blkSize);
 	unsigned char* read(unsigned addr);
 	unsigned char* get(unsigned addr);
+	int drop(unsigned addr);
 
 private:
 	int maxFreq = 0;

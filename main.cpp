@@ -1,4 +1,3 @@
-
 #include <string>
 #include <iostream>
 #include <stdlib.h>
@@ -8,14 +7,71 @@
 #include "RawTable.h"
 #include "Table.h"
 #include "Index.h"
+#include "DB.h"
 using namespace std;
 void testTable();
 void testIndex();
+void testDB();
 int main(int argc, char **argv)
 {
 	testTable();
 	system("pause");
 	return 0;
+}
+void testDB()
+{
+	FIFOBufMgr buf(3 * 21, 21);
+	DB db(buf);
+	db.createSeqTable("A", 1, vector<unsigned>({ 0, 4, 8 }), false);
+	unsigned size = 30;
+	unsigned char cond[4];
+	for (unsigned i = 1; i < size; i+=4)
+	{
+		*(unsigned*)cond = i;
+		db.insertInto("A", { {1,cond},{2,cond} }, false);
+	}
+	for (unsigned i = 2; i < size; i += 4)
+	{
+		*(unsigned*)cond = i;
+		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
+	}
+	for (unsigned i = 3; i < size; i += 4)
+	{
+		*(unsigned*)cond = i;
+		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
+	}
+	for (unsigned i = 4; i < size; i += 4)
+	{
+		*(unsigned*)cond = i;
+		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
+	}
+	for (unsigned i = 1; i < size; ++i)
+	{
+		*(unsigned*)cond = i;
+		auto res = db.selectFrom("A", { {1,cond} });
+		cout << "Select where i = " << i << " :";
+		for (auto r : res)
+		{
+			cout << "<" << *(unsigned*)r << ", " << *(unsigned*)(r + 4) << "> ";
+		}
+		cout << endl;
+	}
+	for (unsigned i = 1; i < size; i += 2)
+	{
+		*(unsigned*)cond = i;
+		db.removeFrom("A", { {1,cond} });
+	}
+	for (unsigned i = 1; i < size; ++i)
+	{
+		*(unsigned*)cond = i;
+		auto res = db.selectFrom("A", { { 1,cond } });
+		cout << "Select where i = " << i << " :";
+		for (auto r : res)
+		{
+			cout << "<" << *(unsigned*)r << ", " << *(unsigned*)(r + 4) << "> ";
+		}
+		cout << endl;
+	}
 }
 void testIndex()
 {

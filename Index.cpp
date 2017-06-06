@@ -69,8 +69,7 @@ int HashIndex::insert(unsigned char * attr, unsigned addr, unsigned offset)
 	*(unsigned*)rawAddr = addr;
 	*(unsigned*)rawOffset = offset;
 	format(cache, { {1, attr}, {2, rawAddr}, {3, rawOffset} });
-	rawAdd(cache, bucket, 8);
-	return 1;
+	return rawAdd(cache, bucket, 8).first;
 }
 
 int HashIndex::remove(unsigned char * attr, unsigned addr, unsigned offset)
@@ -84,6 +83,14 @@ int HashIndex::remove(unsigned char * attr, unsigned addr, unsigned offset)
 	for (unsigned char* blk; !(res = doRemove(blk, { {cache, {0, tupleSize}} }, bucket))
 		&& (bucket = getNextAddr(blk)) != -1;);
 	return res;
+}
+
+void HashIndex::save()
+{
+	Table::save();
+	unsigned char* blk = bm.read(metaAddr);
+	*(unsigned*)(blk + 24) = bucketSize;
+	bm.write(metaAddr);
 }
 
 unsigned HashIndex::hash(unsigned char * attr)
