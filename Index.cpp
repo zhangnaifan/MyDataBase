@@ -1,28 +1,23 @@
 #include "Index.h"
 
-Index::Index(BufferManager &_bm, unsigned _metaAddr) :SeqTable(_bm, _metaAddr)
+Index::Index(unsigned _metaAddr, BufferManager & _bm) :Table(_metaAddr, _bm)
 {
 	attrSize = cols[1];
 }
 
-Index::Index(BufferManager & _bm, unsigned _attrSize, bool _cmp)
-	: SeqTable(_bm, _attrSize + 8, 1, std::vector<unsigned>({ 0, _attrSize, _attrSize + 4, _attrSize + 8 }), _cmp), attrSize(_attrSize)
+Index::Index(BufferManager & _bm, unsigned _attrSize)
+	: Table(_bm, _attrSize + 8, 1, std::vector<unsigned>({ 0, _attrSize, _attrSize + 4, _attrSize + 8 })), attrSize(_attrSize)
 {
 }
 
-Index::~Index()
-{
-	delete[] icache;
-}
-
-HashIndex::HashIndex(BufferManager & _bm, unsigned _metaAddr):Index(_bm, _metaAddr)
+HashIndex::HashIndex(unsigned _metaAddr, BufferManager & _bm):Index(_metaAddr, _bm)
 {
 	unsigned char* blk = _bm.read(_metaAddr);
 	bucketSize = *(unsigned*)(blk + 24);
 }
 
-HashIndex::HashIndex(BufferManager & _bm, unsigned _attrSize, bool _cmp, unsigned _bucketSize)
-	:Index(_bm, _attrSize, _cmp), bucketSize(_bucketSize)
+HashIndex::HashIndex(BufferManager & _bm, unsigned _attrSize, unsigned _bucketSize)
+	:Index(_bm, _attrSize), bucketSize(_bucketSize)
 {
 	//³õÊ¼»¯Í°
 	index.resize(bucketSize);
@@ -73,8 +68,8 @@ int HashIndex::insert(unsigned char * attr, unsigned addr, unsigned offset)
 	unsigned char rawAddr[4], rawOffset[4];
 	*(unsigned*)rawAddr = addr;
 	*(unsigned*)rawOffset = offset;
-	format(icache, { {1, attr}, {2, rawAddr}, {3, rawOffset} });
-	rawAdd(icache, bucket, 8);
+	format(cache, { {1, attr}, {2, rawAddr}, {3, rawOffset} });
+	rawAdd(cache, bucket, 8);
 	return 1;
 }
 
@@ -84,9 +79,9 @@ int HashIndex::remove(unsigned char * attr, unsigned addr, unsigned offset)
 	unsigned char rawAddr[4], rawOffset[4];
 	*(unsigned*)rawAddr = addr;
 	*(unsigned*)rawOffset = offset;
-	format(icache, { { 1, attr },{ 2, rawAddr },{ 3, rawOffset } });
+	format(cache, { { 1, attr },{ 2, rawAddr },{ 3, rawOffset } });
 	int res = 0;
-	for (unsigned char* blk; !(res = doRemove(blk, { {icache, {0, tupleSize}} }, bucket))
+	for (unsigned char* blk; !(res = doRemove(blk, { {cache, {0, tupleSize}} }, bucket))
 		&& (bucket = getNextAddr(blk)) != -1;);
 	return res;
 }

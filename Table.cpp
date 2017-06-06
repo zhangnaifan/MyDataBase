@@ -5,7 +5,7 @@
 #include <iostream>
 #include <vector>
 
-SeqTable::SeqTable(BufferManager & _bm, unsigned _metaAddr):RawTable(_bm, _metaAddr)
+Table::Table(unsigned _metaAddr, BufferManager & _bm):RawTable(_metaAddr, _bm)
 {
 	unsigned char* blk = _bm.read(_metaAddr);
 	unsigned char* p = blk + 28;
@@ -50,15 +50,36 @@ SeqTable::SeqTable(BufferManager & _bm, unsigned _metaAddr):RawTable(_bm, _metaA
 	}
 }
 
-SeqTable::SeqTable(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp)
-	:searchKey(_searchKey),cols(_cols), RawTable(_bm, _tupleSize, _cmp)
+Table::Table(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols)
+	:searchKey(_searchKey),cols(_cols), RawTable(_bm, _tupleSize)
 {
 	index.push_back(startAddr);
 }
 
-SeqTable::~SeqTable()
+Table::~Table()
 {
 	delete[] cache;
+}
+
+void Table::format(unsigned char * blk, std::map<unsigned, unsigned char*> args)
+{
+	memset(blk, 0, tupleSize);
+	for (auto p : args)
+	{
+		memcpy(blk + cols[p.first - 1], p.second, cols[p.first] - cols[p.first - 1]);
+	}
+}
+
+
+SeqTable::SeqTable(unsigned _metaAddr, BufferManager & _bm):Table(_metaAddr, _bm)
+{
+	unsigned char* blk = bm.read(_metaAddr);
+	cmp = *(bool*)(blk + 24);
+}
+
+SeqTable::SeqTable(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp)
+	:Table(_bm, _tupleSize, _searchKey, _cols), cmp(_cmp)
+{
 }
 
 int SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
@@ -291,13 +312,3 @@ std::vector<unsigned> SeqTable::binarySearch(unsigned char * cond)
 	}
 	return ret;
 }
-
-void SeqTable::format(unsigned char* blk, std::map<unsigned, unsigned char*> args)
-{
-	memset(blk, 0, tupleSize);
-	for (auto p : args)
-	{
-		memcpy(blk + cols[p.first-1], p.second, cols[p.first] - cols[p.first - 1]);
-	}
-}
-

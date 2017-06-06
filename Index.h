@@ -24,26 +24,24 @@ sorted by attr_val
 sorted by hash_val
 */
 
-class Index : public SeqTable
+class Index : public Table
 {
 public:
-	Index(BufferManager &_bm, unsigned _metaAddr);
-	Index(BufferManager & _bm, unsigned _attrSize, bool _cmp);
-	~Index();
+	Index(unsigned _metaAddr, BufferManager & _bm);
+	Index(BufferManager & _bm, unsigned _attrSize);
 	virtual std::vector<std::pair<unsigned, unsigned>> get(unsigned char* attr) = 0;
 	virtual int insert(unsigned char* attr, unsigned addr, unsigned offset) = 0;
 	virtual int remove(unsigned char* attr, unsigned addr, unsigned offset) = 0;
 
 protected:
 	unsigned attrSize;
-	unsigned char* icache = new unsigned char[bm.getBlkSize()];
 };
 
 class HashIndex : public Index
 {
 public:
-	HashIndex(BufferManager &_bm, unsigned _metaAddr);
-	HashIndex(BufferManager & _bm, unsigned _attrSize, bool _cmp, unsigned _bucketSize);
+	HashIndex(unsigned _metaAddr, BufferManager & _bm);
+	HashIndex(BufferManager & _bm, unsigned _attrSize, unsigned _bucketSize);
 	std::vector<std::pair<unsigned, unsigned>> get(unsigned char* attr);
 	int insert(unsigned char* attr, unsigned addr, unsigned offset);
 	int remove(unsigned char* attr, unsigned addr, unsigned offset);

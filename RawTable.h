@@ -12,7 +12,7 @@ class RawTable
 {
 public:
 	//初始化方式一：从_metaAddr对应的磁盘中读取数据库的配置信息，详情见block.h头文件
-	RawTable(BufferManager &_bm, unsigned _metaAddr);
+	RawTable(unsigned addr, BufferManager &_bm);
 	/*
 	初始化方式二：在内存中根据参数直接初始化
 	参数：
@@ -20,7 +20,7 @@ public:
 		_tupleSize：元组所占的字节数
 		_cmp：进行线性搜索时的比较方式，true：字符串比较，false：4字节无符号整数比较
 	*/
-	RawTable(BufferManager &_bm, unsigned _tupleSize, bool _cmp);
+	RawTable(BufferManager &_bm, unsigned _tupleSize);
 	~RawTable();
 
 	/*

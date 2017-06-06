@@ -4,17 +4,16 @@
 #include "RawTable.h"
 
 //假设blk大小至少为24
-RawTable::RawTable(BufferManager &_bm, unsigned addr) : bm(_bm), metaAddr(addr)
+RawTable::RawTable(unsigned addr, BufferManager &_bm) : bm(_bm), metaAddr(addr)
 {
 	unsigned char* blk = bm.read(addr);
 	tupleSize = *(unsigned*)(blk + 8);
 	startAddr = *(unsigned*)(blk + 12);
 	numBlk = *(unsigned*)(blk + 16);
-	cmp = *(bool*)(blk + 20);
 }
 
-RawTable::RawTable(BufferManager &_bm, unsigned _tupleSize, bool _cmp) 
-	: bm(_bm), tupleSize(_tupleSize), metaAddr(-1), cmp(_cmp)
+RawTable::RawTable(BufferManager &_bm, unsigned _tupleSize) 
+	: bm(_bm), tupleSize(_tupleSize), metaAddr(-1)
 {
 	startAddr = rand();
 	numBlk = 1;
@@ -41,7 +40,6 @@ unsigned RawTable::saveTable()
 	*(unsigned*)(blk + 8) = tupleSize;
 	*(unsigned*)(blk + 12) = startAddr;
 	*(unsigned*)(blk + 16) = numBlk;
-	*(bool*)(blk + 20) = cmp;
 	bm.write(metaAddr);
 	return metaAddr;
 }
