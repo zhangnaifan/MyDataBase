@@ -261,7 +261,7 @@ int SeqTable::remove(std::map<unsigned, unsigned char*> args)
 				else
 				{
 					unsigned char* blk = bm.read(index[addr - 1]);
-					*(unsigned*)(blk + 4) = getNextAddr(cache);
+					*(unsigned*)(blk + 4) = getNextAddr(bufBlk);
 					bm.write(index[addr - 1]);
 				}
 				index.erase(index.begin() + addr);

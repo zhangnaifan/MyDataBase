@@ -9,8 +9,6 @@
 #include "Index.h"
 #include "DB.h"
 using namespace std;
-void testTable();
-void testIndex();
 void testDB();
 int main(int argc, char **argv)
 {
@@ -33,7 +31,22 @@ void rmvDB(DB& db, vector<unsigned> v)
 	for (auto i : v)
 	{
 		*(unsigned*)cond = i;
-		db.removeFrom("A", { { 1,cond }});
+		db.removeFrom("A", { { 2,cond }});
+	}
+}
+void selDB(DB& db, vector<unsigned> v)
+{
+	unsigned char cond[4];
+	for (auto i : v)
+	{
+		*(unsigned*)cond = i;
+		cout << "sel of " << i << ": ";
+		auto res = db.selectFrom("A", { { 1,cond } });
+		for (auto j : res)
+		{
+			cout << "<" << *(unsigned*)j << ", " << *(unsigned*)(j + 4) << "> ";
+		}
+		cout << endl;
 	}
 }
 
@@ -41,6 +54,7 @@ void testDB()
 {
 	FIFOBufMgr buf(30 * 21, 21);
 	DB db(buf);
+	
 	db.createSeqTable("A", 1, vector<unsigned>({ 0, 4, 8 }), false);
 	auto& index = db.createHashIndexOn("IA", "A", 1, 4);
 	unsigned size = 30;
@@ -51,341 +65,14 @@ void testDB()
 	for (unsigned i = 3; i < size; i += 4)v.push_back(i);
 	for (unsigned i = 4; i < size; i += 4)v.push_back(i);
 	doDB(db, v);
+	selDB(db, v);
 	v.clear();
 	for (unsigned i = 1; i < size; i += 3)v.push_back(i);
 	for (unsigned i = 2; i < size; i += 3)v.push_back(i);
 	rmvDB(db, v);
-	
-	for (unsigned i = 1; i < size; ++i)
-	{
-		cout << "index of " << i << ": ";
-		*(unsigned*)cond = i;
-		auto res = index.get(cond);
-		for (auto j : res)
-		{
-			unsigned char* blk = buf.read(j);
-			for (unsigned char*p = blk + 8; p != *(unsigned*)blk + blk; p += 8)
-			{
-				if (memcmp(p, cond, 4) == 0)
-				{
-					cout << "ok ";
-				}
-			}
-		}
-		cout << endl;
-	}
-}
-void testIndex()
-{
-	FIFOBufMgr buf(3 * (1 + 8 + 12), 21);
-	HashIndex index(buf, 4, 4);
-	unsigned size = 30;
-	unsigned char attr[4];
-	for (unsigned i = 1; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 2; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 3; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 4; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 1; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 2; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 3; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 4; i < size; i += 4)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-
-	for (unsigned i = 1; i < size; ++i)
-	{
-		*(unsigned*)attr = i;
-		auto res = index.get(attr);
-		cout << "res of " << i << " : ";
-		for (auto entry : res)
-		{
-			cout << "<" << entry<< "> ";
-		}
-		cout << endl;
-	}
-	for (unsigned i = 1; i < size; i += 2)
-	{
-		*(unsigned*)attr = i;
-		index.remove(attr, i);
-	}
-	for (unsigned i = 1; i < size; ++i)
-	{
-		*(unsigned*)attr = i;
-		auto res = index.get(attr);
-		cout << "res of " << i << " : ";
-		for (auto entry : res)
-		{
-			cout << "<" << entry << "> ";
-		}
-		cout << endl;
-	}
-	for (unsigned i = 1; i < size; i += 2)
-	{
-		*(unsigned*)attr = i;
-		index.insert(attr, i);
-		//cout << "insert " << i << endl;
-	}
-	for (unsigned i = 1; i < size; ++i)
-	{
-		*(unsigned*)attr = i;
-		auto res = index.get(attr);
-		cout << "res of " << i << " : ";
-		for (auto entry : res)
-		{
-			cout << "<" << entry << "> ";
-		}
-		cout << endl;
-	}
-}
-void testTable()
-{
-	FIFOBufMgr buf(8 * (1 + 8 + 8 * 2), 8 + 8 * 2);
-	vector<unsigned> v = { 0, 4, 8 };
-	SeqTable t(buf, 8, 2, v, false);
-	unsigned char first[4], second[4];
-	unsigned size = 30;
-	for (unsigned i = 1; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 2; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 3; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 4; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 1; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 2; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 3; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 4; i < size; i += 4) {
-		*(unsigned*)first = i;
-		*(unsigned*)second = i;
-		//cout << "insert " << i << endl;
-		t.insert({ { 1,first },{ 2,second } }, true);
-	}
-	for (unsigned i = 1; i < size; ++i)
-	{
-		unsigned char tuple[4];
-		*(unsigned*)tuple = i;
-		auto p = t.binarySearch(tuple);
-		//if (p[0] != 0)
-		//cout << i << endl;
-		cout << i << ": " << (int)p[0] << "," << p[1] << "," << p[3] << endl;
-	}
-
-	for (unsigned i = 1; i < size; i += 5)
-	{
-		*(unsigned*)second = i;
-		t.remove({ { 1, second } });
-	}
-
-	for (unsigned i = 1; i < size; ++i)
-	{
-		unsigned char tuple[4];
-		*(unsigned*)tuple = i;
-		auto res = t.select({ { 2, tuple } });
-		for (auto j : res)
-		{
-			cout << "res of " << i << ": " << *(unsigned*)(j + 4) << endl;
-		}
-		//auto p = t.binarySearch(tuple);
-		//if (p[0] != 0)
-		//cout << i << endl;
-		//cout << i << ": " << (int)p[0] << "," << p[1] << "," << p[3] << endl;
-	}
-
-}
-/*
-void testSearch()
-{
-FIFOBufMgr buf(3 * (1 + 8 + 4 * 3), 8 + 4 * 3);
-RawTable tb(buf, 4, false);
-for (unsigned i = 1; i < 20; i++)
-{
-unsigned char tuple[8];
-*(unsigned*)tuple = i;
-auto res = tb.linearSerach(tuple, 0, 4);
-//cout << "before insert pos:" << res.second.first << ", " << res.second.second << endl;
-tb.rawAdd(tuple, res.second.first, res.second.second);
-}
-/*
-for (unsigned i = 2; i < 200; i += 2)
-{
-unsigned char tuple[8];
-*(unsigned*)tuple = i;
-auto res = tb.linearSerach(tuple, 0, 4);
-cout << i << ": before insert pos:" << res.second.first << ", " << res.second.second << endl;
-tb.rawAdd(tuple, res.second.first, res.second.second);
-
-/*res = tb.linearSerach(tuple, 0, 4);
-cout << "tuple " << i << " linear search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-res = tb.linearSerach(tuple, 0, 4);
-cout << "tuple " << i << " binary search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-*/
-/*	}
-for (unsigned i = 1; i < 20; ++i) {
-unsigned char tuple[8];
-*(unsigned*)tuple = i;
-auto res = tb.linearSerach(tuple, 0, 4);
-cout << "tuple " << i << " linear search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-//res = tb.binarySearch(tuple, 0, 4);
-//cout << "tuple " << i << " binary search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-}
-cout << "-----------------" << endl;
-for (unsigned i = 2; i < 20; i += 2)
-{
-unsigned char tuple[8];
-*(unsigned*)tuple = i;
-tb.rawRemove(tuple, 0, 4);
-}
-for (unsigned i = 1; i < 20; ++i) {
-unsigned char tuple[8];
-*(unsigned*)tuple = i;
-auto res = tb.linearSerach(tuple, 0, 4);
-cout << "tuple " << i << " linear search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-//res = tb.binarySearch(tuple, 0, 4);
-//cout << "tuple " << i << " binary search result <" << res.first << ", <" << res.second.first << ", " << res.second.second << ">>" << endl;
-}
-}
-*/
-/*
-void testRawTable()
-{
-FIFOBufMgr bm(30 * 17, 8 + 8);
-RawTable table(bm, 4, false);
-unsigned char tuple[4] = { 0 };
-for (int i = 1; i <= 5; ++i)
-{
-*(unsigned*)tuple = i;
-table.rawAdd(tuple);
-
-}
-for (int i = 1; i <= 5; ++i)
-{
-*(unsigned*)tuple = i;
-vector<unsigned char*> res = table.rawSelect(tuple, 0, 4);
-for (auto i : res)
-{
-printf("read %d\n", *(unsigned*)i);
-}
-}
-cout << "------------\n";
-*(unsigned*)tuple = 3;
-unsigned char after[4];
-*(unsigned*)after = 6666;
-table.rawUpdate(tuple, 0, 4, after);
-for (int i = 1; i <= 5; ++i)
-{
-*(unsigned*)tuple = (i == 3) ? 6666 : i;
-vector<unsigned char*> res = table.rawSelect(tuple, 0, 4);
-for (auto i : res)
-{
-printf("read %d\n", *(unsigned*)i);
-}
-}
-cout << "--------------\n";
-*(unsigned*)tuple = 2;
-table.rawRemove(tuple, 0, 4);
-*(unsigned*)tuple = 1;
-table.rawRemove(tuple, 0, 4);
-for (int i = 1; i <= 5; ++i)
-{
-*(unsigned*)tuple = i;
-vector<unsigned char*> res = table.rawSelect(tuple, 0, 4);
-for (auto i : res)
-{
-printf("read %d\n", *(unsigned*)i);
-}
-}
-}
-*/
-void testBM()
-{
-	LRUBufMgr bm(3 * 9, 8);
-	for (unsigned i = 1; i <= 5; ++i)
-	{
-		unsigned char* wr = bm.get(i);
-		*(unsigned*)wr = i;
-		cout << "write " << i << " into block " << i << endl;
-		if (!bm.write(i))
-		{
-			cout << "WRITE ERROR " << i << endl;
-		}
-	}
-	cout << "# of IO: " << bm.getNumIO() << endl;
-	for (unsigned i = 5; i >= 1; --i)
-	{
-		unsigned char *rd = bm.read(i);
-		cout << "read " << *(unsigned*)rd << " from block " << i << endl;
-	}
-	cout << "# of IO: " << bm.getNumIO() << endl;
+	v.clear();
+	for (unsigned i = 1; i < size; ++i)v.push_back(i);
+	selDB(db, v);
 }
 int demo()
 {

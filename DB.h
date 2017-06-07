@@ -18,6 +18,7 @@ class DB
 {
 public:
 	DB(BufferManager& _bm):bm(_bm){}
+	~DB();
 	//基本创建、写磁盘、销毁操作
 	Table& createSeqTable(std::string tableName, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp);
 	Index& createHashIndexOn(std::string indexName, std::string tableName, unsigned attr, unsigned _bucketSize);
@@ -54,6 +55,9 @@ private:
 	//map from table_name to (attr, index_name)
 	std::unordered_map<std::string, std::vector<std::pair<unsigned, std::string>>> tabIdx;
 	BufferManager &bm;
+
+	//helper functions
+	int doRemove(std::string tableName, unsigned char* &blk, std::vector<std::pair<unsigned char*, std::pair<unsigned, unsigned>>> args, unsigned addr);
 };
 
 #endif // !MYDB
