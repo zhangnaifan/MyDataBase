@@ -22,7 +22,7 @@ Index & DB::createHashIndexOn(std::string indexName, std::string tableName, unsi
 		unsigned char* blk = bm.read(addr);
 		for (unsigned char* p = blk + 8; p != *(unsigned*)blk + blk; p += table.getTupleSize())
 		{
-			index.insert(p + beg, addr, p - blk);
+			index.insert(p + beg, addr);
 		}
 	}
 	tabIdx[tableName].emplace_back(attr, indexName);
@@ -33,20 +33,44 @@ int DB::insertInto(std::string tableName, std::map<unsigned, unsigned char*> con
 {
 	auto& table = *tables[tableName];
 	auto insertResult = table.insert(cond, distinct);
-	if (insertResult.first == 0)
+	unsigned newBlkIndex = insertResult.first;
+	unsigned newTupleIndex = insertResult.second;
+	//插入失败
+	if (newBlkIndex == 0)
 	{
 		return 0;
 	}
-	unsigned blk = insertResult.second.first;
-	unsigned offset = insertResult.second.second;
-	//更新索引
+	//插入成功，更新每一个索引
 	for (auto p : tabIdx[tableName])
 	{
 		//找到一个索引
 		unsigned attr = p.first;
+		auto& index = indexes[p.second];
+		//插入新元组对应的索引
 		if (cond.find(attr) != cond.end())
 		{
-			indexes[p.second]->insert(cond[attr], blk, offset);
+			index->insert(cond[attr], table.index[newTupleIndex]);
+		}
+		//更新位置变化的元组的索引
+		if (newBlkIndex != -1)
+		{
+			unsigned newBlkAddr = table.index[newBlkIndex];
+			unsigned prevAddr = table.index[newBlkIndex - 1];
+			unsigned char* blk = bm.read(newBlkAddr);
+			bool flag = (newBlkIndex == newTupleIndex);
+			for (unsigned char* p = blk + 8; p != *(unsigned*)blk + blk; p += table.getTupleSize())
+			{
+				if (flag &&
+					memcmp(p + table.cols[attr - 1], cond[attr], table.cols[attr] - table.cols[attr - 1]) == 0)
+				{
+					flag = false;
+					continue;
+				}
+				//删除原来的索引项
+				index->remove(p + table.cols[attr - 1], prevAddr);
+				//插入新的索引项
+				index->insert(p + table.cols[attr - 1], newBlkAddr);
+			}
 		}
 	}
 	return 1;
@@ -54,6 +78,8 @@ int DB::insertInto(std::string tableName, std::map<unsigned, unsigned char*> con
 
 int DB::removeFrom(std::string tableName, std::map<unsigned, unsigned char*> cond)
 {
+	auto& table = *tables[tableName];
+
 	return tables[tableName]->remove(cond);
 }
 

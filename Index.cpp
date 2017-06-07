@@ -6,7 +6,7 @@ Index::Index(unsigned _metaAddr, BufferManager & _bm) :Table(_metaAddr, _bm)
 }
 
 Index::Index(BufferManager & _bm, unsigned _attrSize)
-	: Table(_bm, _attrSize + 8, 1, std::vector<unsigned>({ 0, _attrSize, _attrSize + 4, _attrSize + 8 })), attrSize(_attrSize)
+	: Table(_bm, _attrSize + 4, 1, std::vector<unsigned>({ 0, _attrSize, _attrSize + 4 })), attrSize(_attrSize)
 {
 }
 
@@ -34,9 +34,9 @@ HashIndex::HashIndex(BufferManager & _bm, unsigned _attrSize, unsigned _bucketSi
 	}
 }
 
-std::vector<std::pair<unsigned, unsigned>> HashIndex::get(unsigned char * attr)
+std::vector<unsigned> HashIndex::get(unsigned char * attr)
 {
-	std::vector<std::pair<unsigned, unsigned>> res;
+	std::vector<unsigned> res;
 
 	std::vector<std::pair<unsigned char*, std::pair<unsigned, unsigned>>> cond{ {attr, {0, attrSize}} };
 	unsigned char *blk;
@@ -45,7 +45,7 @@ std::vector<std::pair<unsigned, unsigned>> HashIndex::get(unsigned char * attr)
 		auto tmp = doSelect(blk, cond, addr);
 		for (auto tuple : tmp)
 		{
-			res.emplace_back(*(unsigned*)(tuple + attrSize), *(unsigned*)(tuple + attrSize + 4));
+			res.emplace_back(*(unsigned*)(tuple + attrSize));
 		}
 		/*
 		ԭʼ�汾
@@ -62,23 +62,21 @@ std::vector<std::pair<unsigned, unsigned>> HashIndex::get(unsigned char * attr)
 	return res;
 }
 
-int HashIndex::insert(unsigned char * attr, unsigned addr, unsigned offset)
+int HashIndex::insert(unsigned char * attr, unsigned addr)
 {
 	unsigned bucket = index[hash(attr)];
-	unsigned char rawAddr[4], rawOffset[4];
+	unsigned char rawAddr[4];
 	*(unsigned*)rawAddr = addr;
-	*(unsigned*)rawOffset = offset;
-	format(cache, { {1, attr}, {2, rawAddr}, {3, rawOffset} });
+	format(cache, { {1, attr}, {2, rawAddr} });
 	return rawAdd(cache, bucket, 8).first;
 }
 
-int HashIndex::remove(unsigned char * attr, unsigned addr, unsigned offset)
+int HashIndex::remove(unsigned char * attr, unsigned addr)
 {
 	unsigned bucket = index[hash(attr)];
-	unsigned char rawAddr[4], rawOffset[4];
+	unsigned char rawAddr[4];
 	*(unsigned*)rawAddr = addr;
-	*(unsigned*)rawOffset = offset;
-	format(cache, { { 1, attr },{ 2, rawAddr },{ 3, rawOffset } });
+	format(cache, { { 1, attr },{ 2, rawAddr }});
 	int res = 0;
 	for (unsigned char* blk; !(res = doRemove(blk, { {cache, {0, tupleSize}} }, bucket))
 		&& (bucket = getNextAddr(blk)) != -1;);

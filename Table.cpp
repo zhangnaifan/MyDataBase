@@ -176,12 +176,17 @@ SeqTable::SeqTable(BufferManager & _bm, int _tupleSize, unsigned _searchKey, std
 {
 }
 
-std::pair<unsigned, std::pair<unsigned, unsigned>> SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
+/*
+返回值：
+参数1：0：插入失败； -1：无新引入磁盘块；否则：新磁盘块的索引下标
+参数2：新元组所在的磁盘块索引下标
+*/
+std::pair<unsigned, unsigned> SeqTable::insert(std::map<unsigned, unsigned char*> args, bool distinct)
 {
 	if (args.find(searchKey) == args.end())
 	{
 		std::cerr << "INSERT ERROR: No SearchKey" << std::endl;
-		return { 0,{} };
+		return { 0,0 };
 	}
 	//构造元组
 	format(cache, args);
@@ -191,17 +196,19 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> SeqTable::insert(std::map<uns
 	if (distinct && pos[0] == 0)
 	{
 		std::cerr << "INSERT FAIL: cannot insert a tuple with exsiting key!" << std::endl;
-		return { 0,{} };
+		return { 0,0 };
 	}
 	//使用rawAdd执行插入，并更新index（如果需要）
 	unsigned addr = pos[2], offset = pos[3];
-	unsigned newAddr;
 	auto rawAddResult = rawAdd(cache, addr, offset);
-	if (-1 != (newAddr = rawAddResult.first))
+	unsigned newTupleIndex = (rawAddResult.second == addr ? pos[1] : pos[1] + 1);
+	if (-1 != rawAddResult.first)
 	{
-		index.insert(index.begin() + pos[1] + 1, newAddr);
+		//更新第一个返回值为原磁盘块索引下标
+		index.insert(index.begin() + pos[1] + 1, rawAddResult.first);
+		return { pos[1] + 1, newTupleIndex };
 	}
-	return { 1, rawAddResult.second };
+	return { -1, newTupleIndex };
 }
 
 int SeqTable::remove(std::map<unsigned, unsigned char*> args)

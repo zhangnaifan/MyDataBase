@@ -14,61 +14,63 @@ void testIndex();
 void testDB();
 int main(int argc, char **argv)
 {
-	testTable();
+	testDB();
 	system("pause");
 	return 0;
 }
-void testDB()
+void doDB(DB& db, vector<unsigned> v)
 {
-	FIFOBufMgr buf(3 * 21, 21);
-	DB db(buf);
-	db.createSeqTable("A", 1, vector<unsigned>({ 0, 4, 8 }), false);
-	unsigned size = 30;
 	unsigned char cond[4];
-	for (unsigned i = 1; i < size; i+=4)
+	for (auto i : v)
 	{
 		*(unsigned*)cond = i;
 		db.insertInto("A", { {1,cond},{2,cond} }, false);
 	}
-	for (unsigned i = 2; i < size; i += 4)
+}
+void rmvDB(DB& db, vector<unsigned> v)
+{
+	unsigned char cond[4];
+	for (auto i : v)
 	{
 		*(unsigned*)cond = i;
-		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
+		db.removeFrom("A", { { 1,cond }});
 	}
-	for (unsigned i = 3; i < size; i += 4)
-	{
-		*(unsigned*)cond = i;
-		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
-	}
-	for (unsigned i = 4; i < size; i += 4)
-	{
-		*(unsigned*)cond = i;
-		db.insertInto("A", { { 1,cond },{ 2,cond } }, false);
-	}
+}
+
+void testDB()
+{
+	FIFOBufMgr buf(30 * 21, 21);
+	DB db(buf);
+	db.createSeqTable("A", 1, vector<unsigned>({ 0, 4, 8 }), false);
+	auto& index = db.createHashIndexOn("IA", "A", 1, 4);
+	unsigned size = 30;
+	unsigned char cond[4];
+	vector<unsigned> v;
+	for (unsigned i = 1; i < size; i+=4)v.push_back(i);
+	for (unsigned i = 2; i < size; i += 4)v.push_back(i);
+	for (unsigned i = 3; i < size; i += 4)v.push_back(i);
+	for (unsigned i = 4; i < size; i += 4)v.push_back(i);
+	doDB(db, v);
+	v.clear();
+	for (unsigned i = 1; i < size; i += 3)v.push_back(i);
+	for (unsigned i = 2; i < size; i += 3)v.push_back(i);
+	rmvDB(db, v);
+	
 	for (unsigned i = 1; i < size; ++i)
 	{
+		cout << "index of " << i << ": ";
 		*(unsigned*)cond = i;
-		auto res = db.selectFrom("A", { {1,cond} });
-		cout << "Select where i = " << i << " :";
-		for (auto r : res)
+		auto res = index.get(cond);
+		for (auto j : res)
 		{
-			cout << "<" << *(unsigned*)r << ", " << *(unsigned*)(r + 4) << "> ";
-		}
-		cout << endl;
-	}
-	for (unsigned i = 1; i < size; i += 2)
-	{
-		*(unsigned*)cond = i;
-		db.removeFrom("A", { {1,cond} });
-	}
-	for (unsigned i = 1; i < size; ++i)
-	{
-		*(unsigned*)cond = i;
-		auto res = db.selectFrom("A", { { 1,cond } });
-		cout << "Select where i = " << i << " :";
-		for (auto r : res)
-		{
-			cout << "<" << *(unsigned*)r << ", " << *(unsigned*)(r + 4) << "> ";
+			unsigned char* blk = buf.read(j);
+			for (unsigned char*p = blk + 8; p != *(unsigned*)blk + blk; p += 8)
+			{
+				if (memcmp(p, cond, 4) == 0)
+				{
+					cout << "ok ";
+				}
+			}
 		}
 		cout << endl;
 	}
@@ -82,49 +84,49 @@ void testIndex()
 	for (unsigned i = 1; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 2; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 3; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 4; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 1; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 2; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 3; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 4; i < size; i += 4)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 
@@ -135,14 +137,14 @@ void testIndex()
 		cout << "res of " << i << " : ";
 		for (auto entry : res)
 		{
-			cout << "<" << entry.first << ", " << entry.second << "> ";
+			cout << "<" << entry<< "> ";
 		}
 		cout << endl;
 	}
 	for (unsigned i = 1; i < size; i += 2)
 	{
 		*(unsigned*)attr = i;
-		index.remove(attr, i, i);
+		index.remove(attr, i);
 	}
 	for (unsigned i = 1; i < size; ++i)
 	{
@@ -151,14 +153,14 @@ void testIndex()
 		cout << "res of " << i << " : ";
 		for (auto entry : res)
 		{
-			cout << "<" << entry.first << ", " << entry.second << "> ";
+			cout << "<" << entry << "> ";
 		}
 		cout << endl;
 	}
 	for (unsigned i = 1; i < size; i += 2)
 	{
 		*(unsigned*)attr = i;
-		index.insert(attr, i, i);
+		index.insert(attr, i);
 		//cout << "insert " << i << endl;
 	}
 	for (unsigned i = 1; i < size; ++i)
@@ -168,7 +170,7 @@ void testIndex()
 		cout << "res of " << i << " : ";
 		for (auto entry : res)
 		{
-			cout << "<" << entry.first << ", " << entry.second << "> ";
+			cout << "<" << entry << "> ";
 		}
 		cout << endl;
 	}

@@ -29,9 +29,9 @@ class Index : public Table
 public:
 	Index(unsigned _metaAddr, BufferManager & _bm);
 	Index(BufferManager & _bm, unsigned _attrSize);
-	virtual std::vector<std::pair<unsigned, unsigned>> get(unsigned char* attr) = 0;
-	virtual int insert(unsigned char* attr, unsigned addr, unsigned offset) = 0;
-	virtual int remove(unsigned char* attr, unsigned addr, unsigned offset) = 0;
+	virtual std::vector<unsigned> get(unsigned char* attr) = 0;
+	virtual int insert(unsigned char* attr, unsigned addr) = 0;
+	virtual int remove(unsigned char* attr, unsigned addr) = 0;
 
 protected:
 	unsigned attrSize;
@@ -42,9 +42,9 @@ class HashIndex : public Index
 public:
 	HashIndex(unsigned _metaAddr, BufferManager & _bm);
 	HashIndex(BufferManager & _bm, unsigned _attrSize, unsigned _bucketSize);
-	std::vector<std::pair<unsigned, unsigned>> get(unsigned char* attr);
-	int insert(unsigned char* attr, unsigned addr, unsigned offset);
-	int remove(unsigned char* attr, unsigned addr, unsigned offset);
+	std::vector<unsigned> get(unsigned char* attr);
+	int insert(unsigned char* attr, unsigned addr);
+	int remove(unsigned char* attr, unsigned addr);
 	void save();
 
 private:

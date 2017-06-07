@@ -42,7 +42,7 @@ class SeqTable : public Table
 public:
 	SeqTable(unsigned _metaAddr, BufferManager & _bm);
 	SeqTable(BufferManager &_bm, int _tupleSize, unsigned _searchKey, std::vector<unsigned> _cols, bool _cmp);
-	std::pair<unsigned, std::pair<unsigned, unsigned>> insert(std::map<unsigned, unsigned char*>, bool distinct);
+	std::pair<unsigned, unsigned> insert(std::map<unsigned, unsigned char*>, bool distinct);
 	int remove(std::map<unsigned, unsigned char*>);
 	std::vector<unsigned char*> select(std::map<unsigned, unsigned char*>);
 	void save();

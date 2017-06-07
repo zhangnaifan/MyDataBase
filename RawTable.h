@@ -34,7 +34,7 @@ public:
 		-1：无新磁盘块被使用
 		否则：新磁盘块地址
 	*/
-	std::pair<unsigned, std::pair<unsigned, unsigned>> rawAdd(unsigned char* tuple, unsigned addr = -1, unsigned offset = -1);
+	std::pair<unsigned, unsigned> rawAdd(unsigned char* tuple, unsigned addr = -1, unsigned offset = -1);
 	
 	/*
 	功能：
@@ -44,7 +44,7 @@ public:
 				其中外面的pair的前者代表字节内容，里面的pair代表该字节内容位于元组的（偏移，长度）
 		addr：删除元组所在的磁盘块，默认-1，将遍历所有磁盘块
 	返回：
-		被删除的元组个数
+		被删除的元组所在磁盘号
 	*/
 	int rawRemove(std::vector<std::pair<unsigned char*, std::pair<unsigned, unsigned>>> args, unsigned addr = -1);
 	/*

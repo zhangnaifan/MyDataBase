@@ -69,7 +69,7 @@ void RawTable::dropAll()
 输入：元组和插入位置
 返回：-1如果没有申请新磁盘块；否则，新的磁盘块地址
 */
-std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
+std::pair<unsigned, unsigned> RawTable::rawAdd(unsigned char * tuple, unsigned addr, unsigned offset)
 {
 	if (addr == -1)
 	{
@@ -82,7 +82,6 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 	}
 	if (full(blk))
 	{
-		std::pair<unsigned, unsigned> blockAddr;
 		//再申请一个磁盘块
 		unsigned newBlkAddr = getFreeBlockOnDisk();
 		//unsigned char* newBlk = bm.get(newBlkAddr);
@@ -90,7 +89,7 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 		//将addr内的元组和tuple平分到新老两个磁盘块中
 		//判断新的元组在哪个磁盘块中
 		unsigned sum = 1 + (*(unsigned*)blk - 8) / tupleSize;
-		unsigned mid =  sum / 2;
+		int mid =  sum / 2;
 		unsigned pos = (offset - 8) / tupleSize + 1;
 
 		//如果新的tuple在原块内
@@ -99,13 +98,12 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 			//拷贝原第mid块到最后一块到newBlk中
 			memcpy(myBuf + 8, blk + 8 + (mid - 1)*tupleSize, (sum - mid)*tupleSize);
 			//将原来的第pos块到第mid-1块平移
-			for (unsigned char* p = blk + 8 + (mid - 2)*tupleSize; p >= blk + 8 + (pos - 1)*tupleSize; p -= tupleSize)
+			for (unsigned char* p = blk + 8 + (mid - 2)*(int)tupleSize; p >= blk + 8 + (pos - 1)*tupleSize; p -= tupleSize)
 			{
 				memcpy(p + tupleSize, p, tupleSize);
 			}
 			//拷贝进tuple
 			memcpy(blk + 8 + (pos - 1)*tupleSize, tuple, tupleSize);
-			blockAddr = { addr, offset };
 		}
 		else
 		{
@@ -115,7 +113,6 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 			memcpy(myBuf + 8, blk + 8 + mid * tupleSize, first * tupleSize);
 			memcpy(myBuf + 8 + first * tupleSize, tuple, tupleSize);
 			memcpy(myBuf + 8 + (first + 1) * tupleSize, blk + 8 + (mid + first)*tupleSize, second*tupleSize);
-			blockAddr = { newBlkAddr, 8 + first*tupleSize };
 		}
 
 		*(unsigned*)myBuf = (sum - mid)*tupleSize + 8;
@@ -143,7 +140,7 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 		*/
 
 		++numBlk;
-		return { newBlkAddr, blockAddr };
+		return { newBlkAddr, pos <= mid ? addr : newBlkAddr };
 	}
 	else
 	{
@@ -161,7 +158,7 @@ std::pair<unsigned, std::pair<unsigned, unsigned>> RawTable::rawAdd(unsigned cha
 		std::cout << std::endl;
 		*/
 		bm.write(addr);
-		return { (unsigned)-1, {addr, offset} };
+		return { -1, addr };
 	}
 }
 
